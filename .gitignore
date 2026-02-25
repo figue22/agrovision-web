@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+build/
+.env
+.env.local
+.env.*.local
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+coverage/
