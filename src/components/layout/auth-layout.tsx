@@ -8,10 +8,20 @@ import { Header } from '@/components/layout/header';
 
 const publicRoutes = ['/auth/login', '/auth/register'];
 
+// Rutas protegidas por rol
+const routePermissions: Record<string, string[]> = {
+  '/admin/users': ['admin'],
+  '/admin/documents': ['admin'],
+  '/admin/catalogs': ['admin'],
+  '/admin/audit': ['admin'],
+  '/admin/analytics': ['admin'],
+  '/admin/monitoring': ['admin', 'tecnico'],
+};
+
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, usuario } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -25,31 +35,40 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
 
     if (!isAuthenticated && !isPublicRoute) {
       router.push('/auth/login');
+      return;
     }
 
     if (isAuthenticated && isPublicRoute) {
       router.push('/dashboard');
+      return;
     }
-  }, [isAuthenticated, pathname, mounted, router]);
 
-  // Evitar flash mientras se monta
+    // Verificar permisos de rol
+    if (isAuthenticated && usuario) {
+      const allowedRoles = Object.entries(routePermissions).find(
+        ([route]) => pathname.startsWith(route),
+      );
+
+      if (allowedRoles && !allowedRoles[1].includes(usuario.rol)) {
+        router.push('/dashboard');
+      }
+    }
+  }, [isAuthenticated, pathname, mounted, router, usuario]);
+
   if (!mounted) {
     return null;
   }
 
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  // Rutas públicas: solo el contenido, sin sidebar ni header
   if (isPublicRoute) {
     return <>{children}</>;
   }
 
-  // Si no está autenticado y no es ruta pública, no mostrar nada (va a redirigir)
   if (!isAuthenticated) {
     return null;
   }
 
-  // Rutas protegidas: sidebar + header + contenido
   return (
     <div className="flex min-h-screen">
       <Sidebar />
