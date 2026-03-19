@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface Agricultor {
   agricultor_id: string;
@@ -27,13 +28,20 @@ interface AuthState {
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  usuario: null,
-  accessToken: null,
-  refreshToken: null,
-  isAuthenticated: false,
-  setAuth: (usuario, accessToken, refreshToken) =>
-    set({ usuario, accessToken, refreshToken, isAuthenticated: true }),
-  logout: () =>
-    set({ usuario: null, accessToken: null, refreshToken: null, isAuthenticated: false }),
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      usuario: null,
+      accessToken: null,
+      refreshToken: null,
+      isAuthenticated: false,
+      setAuth: (usuario, accessToken, refreshToken) =>
+        set({ usuario, accessToken, refreshToken, isAuthenticated: true }),
+      logout: () =>
+        set({ usuario: null, accessToken: null, refreshToken: null, isAuthenticated: false }),
+    }),
+    {
+      name: 'agrovision-auth',
+    },
+  ),
+);
