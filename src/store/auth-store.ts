@@ -37,8 +37,13 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       setAuth: (usuario, accessToken, refreshToken) =>
         set({ usuario, accessToken, refreshToken, isAuthenticated: true }),
-      logout: () =>
-        set({ usuario: null, accessToken: null, refreshToken: null, isAuthenticated: false }),
+      logout: () => {
+        set({ usuario: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+        // Limpiar caché de queries al cerrar sesión
+        if (typeof window !== 'undefined') {
+          window.location.href = '/auth/login';
+        }
+      },
     }),
     {
       name: 'agrovision-auth',
