@@ -54,4 +54,10 @@ export const cultivosService = {
     const response = await api.get<TipoCultivoResponse[]>('/crops/tipos');
     return response.data;
   },
+
+  getAll: async (): Promise<CultivoParcelaResponse[]> => {
+  const response = await api.get<CultivoParcelaResponse[]>('/crops/all');
+  return response.data;
+  },
+  
 };

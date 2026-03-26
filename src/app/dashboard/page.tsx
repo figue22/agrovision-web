@@ -53,8 +53,8 @@ export default function DashboardPage() {
 
   const { data: cultivos, isLoading: loadingCultivos } = useQuery({
     queryKey: ['cultivos', usuario?.usuario_id],
-    queryFn: cultivosService.getMyCultivos,
-    enabled: !!usuario && isAgricultor,
+    queryFn: isAgricultor ? cultivosService.getMyCultivos : cultivosService.getAll,
+    enabled: !!usuario,
   });
 
   const isLoading = loadingParcelas || loadingCultivos;
