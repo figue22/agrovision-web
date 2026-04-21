@@ -21,7 +21,7 @@ Dashboard web diseñado para técnicos agrícolas y administradores de la plataf
 ## Requisitos
 
 - Node.js >= 20
-- Backend corriendo en `http://localhost:4000`
+- Backend corriendo en `http://localhost:4001`
 
 ## Instalación
 
