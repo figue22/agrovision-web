@@ -47,14 +47,21 @@ export interface AuthResponse {
   };
 }
 
+export interface Requires2faResponse {
+  requiere_2fa: true;
+  mensaje: string;
+}
+
+export type LoginResponse = AuthResponse | Requires2faResponse;
+
 export const authService = {
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>('/auth/register', data);
     return response.data;
   },
 
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>('/auth/login', data);
+  login: async (data: LoginRequest): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>('/auth/login', data);
     return response.data;
   },
 
