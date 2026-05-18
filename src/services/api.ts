@@ -19,11 +19,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Rutas de auth que NO deben hacer logout en 401
+const authRoutes = ['/auth/login', '/auth/login-2fa', '/auth/register', '/auth/2fa/verify', '/auth/2fa/disable'];
+
 // Interceptor: manejar errores de autenticación
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const requestUrl = error.config?.url || '';
+    const isAuthRoute = authRoutes.some((route) => requestUrl.includes(route));
+
+    if (error.response?.status === 401 && !isAuthRoute) {
       useAuthStore.getState().logout();
       if (typeof window !== 'undefined') {
         window.location.href = '/auth/login';
