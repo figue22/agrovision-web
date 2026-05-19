@@ -61,7 +61,7 @@ export default function LoginPage() {
   };
 
   const onSubmit2fa = async () => {
-    if (!credentials || code2fa.length !== 6) {
+    if (!credentials || code2fa.length < 6) {
       setError('Ingresa el código de 6 dígitos');
       return;
     }
@@ -171,7 +171,7 @@ export default function LoginPage() {
             <div className="flex justify-center">
               <input
                 value={code2fa}
-                onChange={(e) => setCode2fa(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onChange={(e) => setCode2fa(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8))}
                 className="h-14 w-48 rounded-xl border bg-background text-center text-2xl tracking-[0.5em] outline-none focus:border-emerald-300 focus:ring-1 focus:ring-emerald-200"
                 placeholder="000000"
                 maxLength={6}
@@ -182,7 +182,7 @@ export default function LoginPage() {
 
             <button
               onClick={onSubmit2fa}
-              disabled={loading || code2fa.length !== 6}
+              disabled={loading || code2fa.length < 6}
               className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
             >
               {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Verificando...</> : 'Verificar código'}
