@@ -215,7 +215,7 @@ export default function WeatherPage() {
                       <td className="px-4 py-2.5 text-right text-xs text-muted-foreground">{d.fuente}</td>
                     </tr>
                   )) : (
-                    <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No hay datos climáticos registrados. Presiona "Actualizar clima actual".</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No hay datos climáticos registrados. Presiona &quot;Actualizar clima actual&quot;.</td></tr>
                   )}
                 </tbody>
               </table>
