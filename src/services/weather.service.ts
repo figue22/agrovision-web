@@ -39,4 +39,12 @@ export const weatherService = {
     const response = await api.get<PromediosResponse>(`/weather/parcela/${parcelaId}/promedios?desde=${desde}&hasta=${hasta}`);
     return response.data;
   },
+  fetchCurrent: async (parcelaId: string): Promise<DatoClimaticoResponse> => {
+    const response = await api.get<DatoClimaticoResponse>(`/weather/parcela/${parcelaId}/fetch`);
+    return response.data;
+  },
+  fetchForecast: async (parcelaId: string): Promise<DatoClimaticoResponse[]> => {
+    const response = await api.get<DatoClimaticoResponse[]>(`/weather/parcela/${parcelaId}/forecast`);
+    return response.data;
+  },
 };
