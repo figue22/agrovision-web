@@ -1,5 +1,5 @@
 'use client';
-
+import Image from 'next/image';
 import { useState } from 'react';
 import { Settings, Shield, Loader2, CheckCircle2, QrCode, Key, RefreshCw, Copy, Check } from 'lucide-react';
 import { api } from '@/services/api';
@@ -157,7 +157,7 @@ export default function SettingsPage() {
                 <div className="rounded-lg border bg-muted/20 p-4">
                   <p className="mb-3 text-sm font-medium">1. Escanea este QR con Google Authenticator o Authy:</p>
                   <div className="flex justify-center">
-                    <img src={qrData.qr_code} alt="QR Code 2FA" className="h-48 w-48 rounded-lg" />
+                    <Image src={qrData.qr_code} alt="QR Code 2FA" width={192} height={192} className="rounded-lg" />
                   </div>
                   <p className="mt-3 text-center text-xs text-muted-foreground">O ingresa manualmente: <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{qrData.secret}</code></p>
                 </div>
