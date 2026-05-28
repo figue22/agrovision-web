@@ -12,6 +12,8 @@ export interface DatoClimaticoResponse {
   velocidad_viento?: number;
   indice_uv?: number;
   cobertura_nubes_pct?: number;
+  presion_atm?: number;
+  datos_crudos?: { prob_lluvia_pct?: number; items_count?: number };
   fuente: string;
 }
 
@@ -46,5 +48,10 @@ export const weatherService = {
   fetchForecast: async (parcelaId: string): Promise<DatoClimaticoResponse[]> => {
     const response = await api.get<DatoClimaticoResponse[]>(`/weather/parcela/${parcelaId}/forecast`);
     return response.data;
+  },
+
+  fetchIdeam: async (parcelaId: string, desde: string, hasta: string): Promise<{ guardados: number; estacion: string; distancia_km: number }> => {
+  const response = await api.get(`/weather/parcela/${parcelaId}/ideam?desde=${desde}&hasta=${hasta}`);
+  return response.data;
   },
 };
