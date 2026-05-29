@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Cloud, Droplets, Thermometer, Wind, Loader2, Sun, RefreshCw, CalendarDays, Gauge, Database } from 'lucide-react';
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer,
+} from 'recharts';
 import { weatherService } from '@/services/weather.service';
 import { parcelasService } from '@/services/parcelas.service';
 import { useAuthStore } from '@/store/auth-store';
@@ -52,7 +56,7 @@ export default function WeatherPage() {
   const { data: forecast } = useQuery({
     queryKey: ['weather-forecast', selectedParcela],
     queryFn: () => weatherService.fetchForecast(selectedParcela),
-    enabled: !!selectedParcela && showForecast,
+    enabled: !!selectedParcela,
   });
 
   const { data: promedios } = useQuery({
@@ -94,6 +98,32 @@ export default function WeatherPage() {
     historialPage * ITEMS_PER_PAGE,
   );
 
+  // Datos para gráficas: histórico real + pronóstico punteado
+  const datosHistorico = historial
+  ?.filter((d) => d.fuente !== 'openweathermap_forecast')
+  .slice()
+  .reverse()
+  .map((d) => ({
+    fecha: formatFecha(d.fecha, { day: 'numeric', month: 'short' }),
+    temp_max: d.temp_maxima != null ? Number(d.temp_maxima) : undefined,
+    temp_min: d.temp_minima != null ? Number(d.temp_minima) : undefined,
+    temp_prom: d.temp_promedio != null ? Number(d.temp_promedio) : undefined,
+    lluvia: d.precipitacion_mm != null ? Number(d.precipitacion_mm) : 0,
+    humedad: d.humedad_pct != null ? Number(d.humedad_pct) : undefined,
+  })) || [];
+
+  const datosPronostico = forecast
+    ?.slice(0, 5)
+    .map((d) => ({
+      fecha: formatFecha(d.fecha, { day: 'numeric', month: 'short' }),
+      temp_max_pred: d.temp_maxima ? Number(d.temp_maxima) : null,
+      temp_min_pred: d.temp_minima ? Number(d.temp_minima) : null,
+      temp_prom_pred: d.temp_promedio ? Number(d.temp_promedio) : null,
+      lluvia_pred: d.precipitacion_mm ? Number(d.precipitacion_mm) : 0,
+    })) || [];
+
+  const datosGrafico = [...datosHistorico, ...datosPronostico];
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
@@ -124,7 +154,6 @@ export default function WeatherPage() {
       {/* Botones y panel IDEAM */}
       {selectedParcela && (
         <div className="space-y-3">
-          {/* Botones OpenWeatherMap */}
           <div className="flex flex-wrap gap-2">
             <button onClick={() => fetchCurrentMutation.mutate()} disabled={fetchCurrentMutation.isPending}
               className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
@@ -140,7 +169,6 @@ export default function WeatherPage() {
             </button>
           </div>
 
-          {/* Panel IDEAM */}
           <div className="rounded-xl border bg-card p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <Database className="h-4 w-4 text-blue-600" />
@@ -169,18 +197,12 @@ export default function WeatherPage() {
                   : <><Database className="h-4 w-4" /> Cargar datos</>}
               </button>
             </div>
-
             {ideamResult && (
               <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
-                <p className="text-sm font-medium text-blue-800">
-                  ✅ {ideamResult.guardados} registros guardados en el historial
-                </p>
-                <p className="mt-0.5 text-xs text-blue-600">
-                  Estación: {ideamResult.estacion} · {ideamResult.distancia_km} km de distancia
-                </p>
+                <p className="text-sm font-medium text-blue-800">✅ {ideamResult.guardados} registros guardados en el historial</p>
+                <p className="mt-0.5 text-xs text-blue-600">Estación: {ideamResult.estacion} · {ideamResult.distancia_km} km de distancia</p>
               </div>
             )}
-
             {fetchIdeamMutation.isError && (
               <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
                 Error al consultar IDEAM. Verifica que la parcela tenga coordenadas válidas.
@@ -286,6 +308,71 @@ export default function WeatherPage() {
             </div>
           )}
 
+          {/* Gráficos históricos + pronóstico */}
+          {datosGrafico.length >= 1 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Gráficos históricos</h2>
+                {datosPronostico.length > 0 && (
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                    <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-4 bg-emerald-600" /> Histórico real</span>
+                    <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-4 border-t-2 border-dashed border-emerald-600" /> Pronóstico</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Temperatura */}
+              <div className="rounded-xl border bg-card p-5 shadow-sm">
+                <h3 className="mb-4 text-xs font-medium text-muted-foreground">Temperatura (°C)</h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={datosGrafico} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="fecha" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(value: number) => [`${value}°C`]} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Line type="monotone" dataKey="temp_max" name="Máx" stroke="#ef4444" dot={datosGrafico.length < 5} strokeWidth={1.5} connectNulls />
+                    <Line type="monotone" dataKey="temp_prom" name="Prom" stroke="#10b981" dot={datosGrafico.length < 5} strokeWidth={2} connectNulls />
+                    <Line type="monotone" dataKey="temp_min" name="Mín" stroke="#3b82f6" dot={datosGrafico.length < 5} strokeWidth={1.5} connectNulls />
+                    <Line type="monotone" dataKey="temp_max_pred" name="Máx (pred)" stroke="#ef4444" dot={false} strokeWidth={1.5} strokeDasharray="5 5" connectNulls />
+                    <Line type="monotone" dataKey="temp_prom_pred" name="Prom (pred)" stroke="#10b981" dot={false} strokeWidth={2} strokeDasharray="5 5" connectNulls />
+                    <Line type="monotone" dataKey="temp_min_pred" name="Mín (pred)" stroke="#3b82f6" dot={false} strokeWidth={1.5} strokeDasharray="5 5" connectNulls />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Precipitación */}
+              <div className="rounded-xl border bg-card p-5 shadow-sm">
+                <h3 className="mb-4 text-xs font-medium text-muted-foreground">Precipitación (mm)</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={datosGrafico} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="fecha" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(value: number) => [`${value} mm`]} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="lluvia" name="Lluvia real" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="lluvia_pred" name="Lluvia (pred)" fill="#3b82f6" opacity={0.4} radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Humedad */}
+              <div className="rounded-xl border bg-card p-5 shadow-sm">
+                <h3 className="mb-4 text-xs font-medium text-muted-foreground">Humedad (%)</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={datosGrafico} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="fecha" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} />
+                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(value: number) => [`${value}%`]} />
+                    <Line type="monotone" dataKey="humedad" name="Humedad" stroke="#06b6d4" dot={datosGrafico.length < 5} strokeWidth={2} connectNulls />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
           {/* Historial con paginación */}
           <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
             <div className="border-b px-5 py-3">
@@ -328,7 +415,6 @@ export default function WeatherPage() {
               </table>
             </div>
 
-            {/* Paginación */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between border-t px-5 py-3">
                 <p className="text-xs text-muted-foreground">
@@ -341,15 +427,10 @@ export default function WeatherPage() {
                     className="rounded-lg border px-2.5 py-1.5 text-xs hover:bg-accent disabled:opacity-40">‹</button>
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let page: number;
-                    if (totalPages <= 5) {
-                      page = i + 1;
-                    } else if (historialPage <= 3) {
-                      page = i + 1;
-                    } else if (historialPage >= totalPages - 2) {
-                      page = totalPages - 4 + i;
-                    } else {
-                      page = historialPage - 2 + i;
-                    }
+                    if (totalPages <= 5) { page = i + 1; }
+                    else if (historialPage <= 3) { page = i + 1; }
+                    else if (historialPage >= totalPages - 2) { page = totalPages - 4 + i; }
+                    else { page = historialPage - 2 + i; }
                     return (
                       <button key={page} onClick={() => setHistorialPage(page)}
                         className={`rounded-lg border px-2.5 py-1.5 text-xs ${historialPage === page ? 'bg-emerald-600 text-white border-emerald-600' : 'hover:bg-accent'}`}>
