@@ -3,6 +3,7 @@ import { api } from '@/services/api';
 export interface ActividadResponse {
   actividad_id: string;
   parcela_id: string;
+  cultivo_parcela_id?: string;
   tipo_actividad_id: number;
   descripcion?: string;
   cantidad?: number;
@@ -10,10 +11,16 @@ export interface ActividadResponse {
   costo_cop?: number;
   fecha_realizacion: string;
   notas?: string;
-  tipoActividad?: { id: number; nombre: string };
+  tipoActividad?: { id: number; nombre: string; codigo?: string };
   insumos?: InsumoResponse[];
   realizadaPor?: { nombre: string; apellido: string };
   parcela?: { parcela_id: string; nombre: string };
+  cultivoParcela?: {
+  cultivo_parcela_id: string;
+  fecha_siembra?: string;
+  area_sembrada_ha?: number;
+  tipoCultivo?: { nombre: string };
+};
 }
 
 export interface InsumoResponse {
@@ -28,6 +35,7 @@ export interface InsumoResponse {
 
 export interface CreateActividadRequest {
   parcela_id: string;
+  cultivo_parcela_id?: string;
   tipo_actividad_id: number;
   descripcion?: string;
   cantidad?: number;
