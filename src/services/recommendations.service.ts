@@ -47,4 +47,8 @@ export const recommendationsService = {
     const response = await api.get<RecomendacionResponse[]>(`/recommendations/all?limit=${limit}`);
     return response.data;
   },
+  generar: async (prediccionId: string): Promise<RecomendacionResponse[]> => {
+    const response = await api.post<RecomendacionResponse[]>(`/recommendations/generar/${prediccionId}`);
+    return response.data;
+  },
 };

@@ -17,7 +17,12 @@ export interface PrediccionResponse {
   fecha_prediccion: string;
   tipoCultivo?: { nombre: string };
   parcela?: { nombre: string };
-  recomendaciones?: { recomendacion_id: string; titulo: string; prioridad: string }[];
+  recomendaciones?: {
+    recomendacion_id: string;
+    titulo: string;
+    prioridad: string;
+    estado_implementacion: string;
+  }[];
 }
 
 export interface CreatePrediccionRequest {
