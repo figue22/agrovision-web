@@ -3,6 +3,7 @@ import { api } from '@/services/api';
 export interface PrediccionResponse {
   prediccion_id: string;
   parcela_id: string;
+  cultivo_parcela_id?: string;
   tipo_cultivo_id: string;
   version_modelo: string;
   tipo_modelo: string;
@@ -12,10 +13,19 @@ export interface PrediccionResponse {
   intervalo_conf_superior?: number;
   nivel_riesgo: string;
   factores_riesgo?: Record<string, unknown>;
+  importancia_features?: Record<string, unknown>;
   fecha_prediccion: string;
   tipoCultivo?: { nombre: string };
   parcela?: { nombre: string };
   recomendaciones?: { recomendacion_id: string; titulo: string; prioridad: string }[];
+}
+
+export interface CreatePrediccionRequest {
+  parcela_id: string;
+  cultivo_parcela_id: string;
+  tipo_cultivo_id: string;
+  modelo?: string;
+  datos_agronomicos?: Record<string, unknown>;
 }
 
 export const predictionsService = {
@@ -33,6 +43,10 @@ export const predictionsService = {
   },
   getAll: async (limit = 50): Promise<PrediccionResponse[]> => {
     const response = await api.get<PrediccionResponse[]>(`/predictions/all?limit=${limit}`);
+    return response.data;
+  },
+  create: async (data: CreatePrediccionRequest): Promise<PrediccionResponse> => {
+    const response = await api.post<PrediccionResponse>('/predictions', data);
     return response.data;
   },
 };
