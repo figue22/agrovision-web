@@ -409,6 +409,28 @@ export default function PredictionsPage() {
                             </div>
                           </div>
                         )}
+                        {p.recomendaciones && p.recomendaciones.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">
+                              Recomendaciones ({p.recomendaciones.length})
+                            </p>
+                            <div className="space-y-2">
+                              {p.recomendaciones.map((r) => (
+                                <div key={r.recomendacion_id} className="rounded-lg border bg-background px-3 py-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                      r.prioridad === 'critica' ? 'bg-red-50 text-red-700' :
+                                      r.prioridad === 'alta' ? 'bg-orange-50 text-orange-700' :
+                                      r.prioridad === 'media' ? 'bg-yellow-50 text-yellow-700' :
+                                      'bg-green-50 text-green-700'
+                                    }`}>{r.prioridad}</span>
+                                    <p className="text-xs font-medium">{r.titulo}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
