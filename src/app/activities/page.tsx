@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   ClipboardList, Plus, Trash2, Loader2, X, DollarSign,
-  Package, Edit2, ChevronDown, ChevronUp, Calendar,
+  Package, Edit2, ChevronDown, ChevronUp, Calendar, Filter,
 } from 'lucide-react';
 import { activitiesService, ActividadResponse, CreateActividadRequest } from '@/services/activities.service';
 import { parcelasService } from '@/services/parcelas.service';
@@ -47,106 +47,112 @@ const tipoIcono: Record<string, string> = {
   fumigacion: '🪣', cosecha: '🌾', poda: '✂️', otro: '📋',
 };
 
-function ActividadCard({ actividad, onDelete, onEdit }: {
+const tipoColor: Record<string, string> = {
+  siembra: 'bg-green-500', fertilizacion: 'bg-yellow-500', riego: 'bg-blue-500',
+  fumigacion: 'bg-purple-500', cosecha: 'bg-amber-500', poda: 'bg-pink-500', otro: 'bg-gray-400',
+};
+
+function TimelineItem({ actividad, onDelete, onEdit }: {
   actividad: ActividadResponse;
   onDelete: (id: string) => void;
   onEdit: (a: ActividadResponse) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const icono = tipoIcono[actividad.tipoActividad?.nombre?.toLowerCase() || ''] || '📋';
+  const tipoNombre = actividad.tipoActividad?.nombre?.toLowerCase() || 'otro';
+  const icono = tipoIcono[tipoNombre] || '📋';
+  const color = tipoColor[tipoNombre] || 'bg-gray-400';
   const [year, month, day] = actividad.fecha_realizacion.split('T')[0].split('-').map(Number);
   const fecha = new Date(year, month - 1, day);
 
   return (
-    <div className="border-b last:border-0">
-      <div
-        className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-muted/20"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 rounded-lg bg-blue-50 p-2 text-lg">{icono}</div>
+    <div className="flex gap-4">
+      {/* Línea del timeline */}
+      <div className="flex flex-col items-center">
+        <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-white text-base ${color}`}>
+          {icono}
+        </div>
+        <div className="w-0.5 flex-1 bg-border mt-1" />
+      </div>
+
+      {/* Contenido */}
+      <div className="mb-4 flex-1 overflow-hidden rounded-xl border bg-card shadow-sm">
+        <div
+          className="flex cursor-pointer items-center justify-between px-4 py-3 hover:bg-muted/20"
+          onClick={() => setExpanded((v) => !v)}
+        >
           <div>
-            <p className="text-sm font-medium">{actividad.tipoActividad?.nombre || `Tipo ${actividad.tipo_actividad_id}`}</p>
-            <p className="text-xs text-muted-foreground">
-              {actividad.descripcion || 'Sin descripción'} ·{' '}
-              <span className="inline-flex items-center gap-0.5">
-                <Calendar className="h-3 w-3" />
-                {fecha.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </span>
-            </p>
-            <div className="mt-1 flex flex-wrap items-center gap-3">
-              {actividad.parcela?.nombre && (
-                <span className="text-[11px] text-muted-foreground">
-                  📍 {actividad.parcela.nombre}
-                </span>
-              )}
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium">{actividad.tipoActividad?.nombre || `Tipo ${actividad.tipo_actividad_id}`}</p>
               {actividad.cultivoParcela?.tipoCultivo?.nombre && (
-                <span className="text-[11px] text-emerald-600 font-medium">
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
                   🌱 {actividad.cultivoParcela.tipoCultivo.nombre}
                   {actividad.cultivoParcela.fecha_siembra && (() => {
                     const [y, m, d] = actividad.cultivoParcela!.fecha_siembra.split('T')[0].split('-').map(Number);
-                    return ` (sembrado ${new Date(y, m - 1, d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })})`;
+                    return ` (${new Date(y, m - 1, d).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })})`;
                   })()}
                 </span>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {actividad.descripcion || 'Sin descripción'}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                {fecha.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+              {actividad.parcela?.nombre && (
+                <span className="text-[11px] text-muted-foreground">📍 {actividad.parcela.nombre}</span>
               )}
               {actividad.costo_cop && (
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   <DollarSign className="h-3 w-3" />${Number(actividad.costo_cop).toLocaleString('es-CO')}
                 </span>
               )}
-              {actividad.cantidad && actividad.unidad && (
-                <span className="text-[11px] text-muted-foreground">{actividad.cantidad} {actividad.unidad}</span>
-              )}
               {actividad.insumos && actividad.insumos.length > 0 && (
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   <Package className="h-3 w-3" />{actividad.insumos.length} insumos
                 </span>
               )}
-              
-              {actividad.realizadaPor && (
-                <span className="text-[11px] text-muted-foreground">
-                  Por: {actividad.realizadaPor.nombre} {actividad.realizadaPor.apellido}
-                </span>
-              )}
             </div>
           </div>
+          <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => onEdit(actividad)} className="rounded-lg p-2 text-muted-foreground hover:bg-blue-50 hover:text-blue-600">
+              <Edit2 className="h-4 w-4" />
+            </button>
+            <button onClick={() => { if (confirm('¿Eliminar esta actividad?')) onDelete(actividad.actividad_id); }}
+              className="rounded-lg p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600">
+              <Trash2 className="h-4 w-4" />
+            </button>
+            {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </div>
         </div>
-        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => onEdit(actividad)} className="rounded-lg p-2 text-muted-foreground hover:bg-blue-50 hover:text-blue-600">
-            <Edit2 className="h-4 w-4" />
-          </button>
-          <button onClick={() => { if (confirm('¿Eliminar esta actividad?')) onDelete(actividad.actividad_id); }}
-            className="rounded-lg p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600">
-            <Trash2 className="h-4 w-4" />
-          </button>
-          {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-        </div>
-      </div>
 
-      {expanded && (
-        <div className="border-t bg-muted/10 px-5 py-4 space-y-3">
-          {actividad.notas && (
-            <div><p className="text-xs font-medium text-muted-foreground">Notas</p><p className="text-sm">{actividad.notas}</p></div>
-          )}
-          {actividad.insumos && actividad.insumos.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">Insumos utilizados</p>
-              <div className="space-y-1">
-                {actividad.insumos.map((ins) => (
-                  <div key={ins.insumo_actividad_id} className="flex items-center justify-between rounded-lg bg-background px-3 py-2 text-xs">
-                    <span className="font-medium">{ins.nombre_insumo}</span>
-                    <div className="flex gap-3 text-muted-foreground">
-                      <span>{ins.cantidad} {ins.unidad}</span>
-                      {ins.marca && <span>{ins.marca}</span>}
-                      {ins.costo_unitario_cop && <span>${Number(ins.costo_unitario_cop).toLocaleString('es-CO')}/u</span>}
+        {expanded && (
+          <div className="border-t bg-muted/10 px-4 py-3 space-y-3">
+            {actividad.notas && (
+              <div><p className="text-xs font-medium text-muted-foreground">Notas</p><p className="text-sm">{actividad.notas}</p></div>
+            )}
+            {actividad.insumos && actividad.insumos.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Insumos utilizados</p>
+                <div className="space-y-1">
+                  {actividad.insumos.map((ins) => (
+                    <div key={ins.insumo_actividad_id} className="flex items-center justify-between rounded-lg bg-background px-3 py-2 text-xs">
+                      <span className="font-medium">{ins.nombre_insumo}</span>
+                      <div className="flex gap-3 text-muted-foreground">
+                        <span>{ins.cantidad} {ins.unidad}</span>
+                        {ins.marca && <span>{ins.marca}</span>}
+                        {ins.costo_unitario_cop && <span>${Number(ins.costo_unitario_cop).toLocaleString('es-CO')}/u</span>}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -159,6 +165,13 @@ export default function ActivitiesPage() {
   const [selectedParcela, setSelectedParcela] = useState('');
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
+
+  // Filtros
+  const [filtroTipo, setFiltroTipo] = useState('');
+  const [filtroDesde, setFiltroDesde] = useState('');
+  const [filtroHasta, setFiltroHasta] = useState('');
+  const [filtroCultivo, setFiltroCultivo] = useState('');
+  const [showFiltros, setShowFiltros] = useState(false);
 
   const { data: parcelas } = useQuery({
     queryKey: ['parcelas-select'],
@@ -282,15 +295,33 @@ export default function ActivitiesPage() {
     });
   };
 
-  const totalPages = Math.ceil((actividades?.length || 0) / ITEMS_PER_PAGE);
-  const actividadesPaginadas = actividades?.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  // Filtrar actividades
+  const actividadesFiltradas = actividades?.filter((a) => {
+    if (filtroTipo && a.tipoActividad?.nombre?.toLowerCase() !== filtroTipo.toLowerCase()) return false;
+    if (filtroCultivo && a.cultivo_parcela_id !== filtroCultivo) return false;
+    if (filtroDesde) {
+      const fechaAct = new Date(a.fecha_realizacion.split('T')[0]);
+      const desde = new Date(filtroDesde);
+      if (fechaAct < desde) return false;
+    }
+    if (filtroHasta) {
+      const fechaAct = new Date(a.fecha_realizacion.split('T')[0]);
+      const hasta = new Date(filtroHasta);
+      if (fechaAct > hasta) return false;
+    }
+    return true;
+  }) || [];
+
+  const totalPages = Math.ceil(actividadesFiltradas.length / ITEMS_PER_PAGE);
+  const actividadesPaginadas = actividadesFiltradas.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const hayFiltrosActivos = filtroTipo || filtroCultivo || filtroDesde || filtroHasta;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Bitácora de Actividades</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Registro de actividades agrícolas e insumos</p>
+          <p className="mt-1 text-sm text-muted-foreground">Timeline de actividades agrícolas e insumos</p>
         </div>
         {selectedParcela && !showForm && (
           <button
@@ -344,7 +375,6 @@ export default function ActivitiesPage() {
             </button>
           </div>
           <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-4">
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="mb-1.5 block text-sm font-medium">Tipo de actividad</label>
@@ -361,13 +391,9 @@ export default function ActivitiesPage() {
               <div>
                 <label className="mb-1.5 block text-sm font-medium">Fecha de realización</label>
                 <input {...form.register('fecha_realizacion')} type="date" className={inputClass} />
-                {form.formState.errors.fecha_realizacion && (
-                  <p className="mt-1 text-xs text-red-500">{form.formState.errors.fecha_realizacion.message as string}</p>
-                )}
               </div>
             </div>
 
-            {/* Cultivo */}
             <div>
               <label className="mb-1.5 block text-sm font-medium">Cultivo (opcional)</label>
               <select {...form.register('cultivo_parcela_id')} className={inputClass}>
@@ -418,14 +444,7 @@ export default function ActivitiesPage() {
                     const unidad = form.getValues('unidad') as string || 'kg';
                     const costo = parseFloat(form.getValues('costo_cop') as any) || 0;
                     const costoUnitario = cantidad > 0 && costo > 0 ? Math.round(costo / cantidad) : undefined;
-                    append({
-                      nombre_insumo: '',
-                      tipo_insumo_id: 1,
-                      cantidad,
-                      unidad,
-                      costo_unitario_cop: costoUnitario,
-                      marca: '',
-                    });
+                    append({ nombre_insumo: '', tipo_insumo_id: 1, cantidad, unidad, costo_unitario_cop: costoUnitario, marca: '' });
                   }}
                   className="flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-accent">
                   <Plus className="h-3 w-3" /> Agregar insumo
@@ -469,33 +488,100 @@ export default function ActivitiesPage() {
         </div>
       )}
 
-      {/* Lista */}
       {!selectedParcela ? (
         <div className="flex h-32 flex-col items-center justify-center gap-2 rounded-xl border bg-card text-sm text-muted-foreground shadow-sm">
-          <ClipboardList className="h-8 w-8 text-muted-foreground/30" />Selecciona una parcela para ver sus actividades
+          <ClipboardList className="h-8 w-8 text-muted-foreground/30" />Selecciona una parcela para ver su bitácora
         </div>
       ) : isLoading ? (
         <div className="flex h-32 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-emerald-600" /></div>
       ) : (
-        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-          <div className="divide-y">
-            {actividadesPaginadas && actividadesPaginadas.length > 0 ? actividadesPaginadas.map((a) => (
-              <ActividadCard
-                key={a.actividad_id}
-                actividad={a}
-                onDelete={(id) => deleteMutation.mutate(id)}
-                onEdit={handleEdit}
-              />
-            )) : (
-              <div className="flex h-32 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
-                <ClipboardList className="h-8 w-8 text-muted-foreground/30" />No hay actividades registradas
+        <>
+          {/* Filtros */}
+          <div className="rounded-xl border bg-card p-4 shadow-sm">
+            <button onClick={() => setShowFiltros((v) => !v)}
+              className="flex items-center gap-2 text-sm font-medium hover:text-emerald-600">
+              <Filter className="h-4 w-4" />
+              Filtros
+              {hayFiltrosActivos && <span className="rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] text-white">Activos</span>}
+              {showFiltros ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+
+            {showFiltros && (
+              <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Tipo de actividad</label>
+                  <select value={filtroTipo} onChange={(e) => { setFiltroTipo(e.target.value); setPage(1); }} className={inputClass}>
+                    <option value="">Todos</option>
+                    {tiposActividad?.map((t: any) => (
+                      <option key={t.id} value={t.nombre}>{tipoIcono[t.codigo] || '📋'} {t.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Cultivo</label>
+                  <select value={filtroCultivo} onChange={(e) => { setFiltroCultivo(e.target.value); setPage(1); }} className={inputClass}>
+                    <option value="">Todos</option>
+                    {cultivosParcela?.map((c) => (
+                      <option key={c.cultivo_parcela_id} value={c.cultivo_parcela_id}>
+                        {c.tipoCultivo?.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Desde</label>
+                  <input type="date" value={filtroDesde} onChange={(e) => { setFiltroDesde(e.target.value); setPage(1); }} className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Hasta</label>
+                  <input type="date" value={filtroHasta} onChange={(e) => { setFiltroHasta(e.target.value); setPage(1); }} className={inputClass} />
+                </div>
+                {hayFiltrosActivos && (
+                  <button onClick={() => { setFiltroTipo(''); setFiltroCultivo(''); setFiltroDesde(''); setFiltroHasta(''); setPage(1); }}
+                    className="col-span-2 h-10 rounded-lg border px-4 text-sm text-red-600 hover:bg-red-50 md:col-span-1">
+                    Limpiar filtros
+                  </button>
+                )}
               </div>
             )}
           </div>
 
+          {/* Info filtros activos */}
+          {hayFiltrosActivos && (
+            <p className="text-xs text-muted-foreground">
+              Mostrando {actividadesFiltradas.length} de {actividades?.length} actividades
+            </p>
+          )}
+
+          {/* Timeline */}
+          {actividadesPaginadas.length > 0 ? (
+            <div className="space-y-0">
+              {actividadesPaginadas.map((a) => (
+                <TimelineItem
+                  key={a.actividad_id}
+                  actividad={a}
+                  onDelete={(id) => deleteMutation.mutate(id)}
+                  onEdit={handleEdit}
+                />
+              ))}
+              {/* Fin del timeline */}
+              <div className="flex gap-4">
+                <div className="flex w-9 justify-center">
+                  <div className="h-4 w-0.5 bg-border" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-32 flex-col items-center justify-center gap-2 rounded-xl border bg-card text-sm text-muted-foreground shadow-sm">
+              <ClipboardList className="h-8 w-8 text-muted-foreground/30" />
+              {hayFiltrosActivos ? 'No hay actividades con estos filtros' : 'No hay actividades registradas'}
+            </div>
+          )}
+
+          {/* Paginación */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t px-5 py-3">
-              <p className="text-xs text-muted-foreground">Página {page} de {totalPages} · {actividades?.length} actividades</p>
+            <div className="flex items-center justify-between rounded-xl border bg-card px-5 py-3 shadow-sm">
+              <p className="text-xs text-muted-foreground">Página {page} de {totalPages} · {actividadesFiltradas.length} actividades</p>
               <div className="flex gap-1">
                 <button onClick={() => setPage(1)} disabled={page === 1} className="rounded-lg border px-2.5 py-1.5 text-xs hover:bg-accent disabled:opacity-40">«</button>
                 <button onClick={() => setPage((p) => p - 1)} disabled={page === 1} className="rounded-lg border px-2.5 py-1.5 text-xs hover:bg-accent disabled:opacity-40">‹</button>
@@ -517,10 +603,8 @@ export default function ActivitiesPage() {
               </div>
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
 }
-
-//TODO : MOSTRAR EL CULTIVO AL QUE SE LE REALIZO LA ACTIVIDAD Y HACER EL COMMIT
