@@ -413,7 +413,20 @@ export default function ActivitiesPage() {
               <div className="mb-2 flex items-center justify-between">
                 <label className="text-sm font-medium">Insumos utilizados</label>
                 <button type="button"
-                  onClick={() => append({ nombre_insumo: '', tipo_insumo_id: 1, cantidad: 1, unidad: 'kg', costo_unitario_cop: undefined, marca: '' })}
+                  onClick={() => {
+                    const cantidad = parseFloat(form.getValues('cantidad') as any) || 1;
+                    const unidad = form.getValues('unidad') as string || 'kg';
+                    const costo = parseFloat(form.getValues('costo_cop') as any) || 0;
+                    const costoUnitario = cantidad > 0 && costo > 0 ? Math.round(costo / cantidad) : undefined;
+                    append({
+                      nombre_insumo: '',
+                      tipo_insumo_id: 1,
+                      cantidad,
+                      unidad,
+                      costo_unitario_cop: costoUnitario,
+                      marca: '',
+                    });
+                  }}
                   className="flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-accent">
                   <Plus className="h-3 w-3" /> Agregar insumo
                 </button>
