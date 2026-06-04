@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Cloud, Droplets, Thermometer, Wind, Loader2, Sun, RefreshCw, CalendarDays, Gauge, Database } from 'lucide-react';
+import {
+  Cloud, Droplets, Thermometer, Wind, Loader2, Sun, RefreshCw,
+  CalendarDays, Gauge, Database, BarChart2, ChevronDown, ChevronUp,
+} from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
@@ -32,6 +35,15 @@ export default function WeatherPage() {
   });
   const [ideamHasta, setIdeamHasta] = useState(() => new Date().toISOString().split('T')[0]);
   const [ideamResult, setIdeamResult] = useState<{ guardados: number; estacion: string; distancia_km: number } | null>(null);
+
+  // Estados para gráficos históricos
+  const [showGraficos, setShowGraficos] = useState(false);
+  const [graficoDesde, setGraficoDesde] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 6);
+    return d.toISOString().split('T')[0];
+  });
+  const [graficoHasta, setGraficoHasta] = useState(() => new Date().toISOString().split('T')[0]);
 
   const hoy = new Date().toISOString().split('T')[0];
   const hace30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -63,6 +75,12 @@ export default function WeatherPage() {
     queryKey: ['weather-promedios', selectedParcela],
     queryFn: () => weatherService.getPromedios(selectedParcela, hace30, hoy),
     enabled: !!selectedParcela,
+  });
+
+  const { data: historialGraficos, isLoading: loadingGraficos } = useQuery({
+    queryKey: ['weather-graficos', selectedParcela, graficoDesde, graficoHasta],
+    queryFn: () => weatherService.getByDateRange(selectedParcela, graficoDesde, graficoHasta),
+    enabled: !!selectedParcela && showGraficos,
   });
 
   const fetchCurrentMutation = useMutation({
@@ -100,17 +118,17 @@ export default function WeatherPage() {
 
   // Datos para gráficas: histórico real + pronóstico punteado
   const datosHistorico = historial
-  ?.filter((d) => d.fuente !== 'openweathermap_forecast')
-  .slice()
-  .reverse()
-  .map((d) => ({
-    fecha: formatFecha(d.fecha, { day: 'numeric', month: 'short' }),
-    temp_max: d.temp_maxima != null ? Number(d.temp_maxima) : undefined,
-    temp_min: d.temp_minima != null ? Number(d.temp_minima) : undefined,
-    temp_prom: d.temp_promedio != null ? Number(d.temp_promedio) : undefined,
-    lluvia: d.precipitacion_mm != null ? Number(d.precipitacion_mm) : 0,
-    humedad: d.humedad_pct != null ? Number(d.humedad_pct) : undefined,
-  })) || [];
+    ?.filter((d) => d.fuente !== 'openweathermap_forecast')
+    .slice()
+    .reverse()
+    .map((d) => ({
+      fecha: formatFecha(d.fecha, { day: 'numeric', month: 'short' }),
+      temp_max: d.temp_maxima != null ? Number(d.temp_maxima) : undefined,
+      temp_min: d.temp_minima != null ? Number(d.temp_minima) : undefined,
+      temp_prom: d.temp_promedio != null ? Number(d.temp_promedio) : undefined,
+      lluvia: d.precipitacion_mm != null ? Number(d.precipitacion_mm) : 0,
+      humedad: d.humedad_pct != null ? Number(d.humedad_pct) : undefined,
+    })) || [];
 
   const datosPronostico = forecast
     ?.slice(0, 5)
@@ -123,6 +141,68 @@ export default function WeatherPage() {
     })) || [];
 
   const datosGrafico = [...datosHistorico, ...datosPronostico];
+
+  // ── Agrupación mensual para gráficos históricos HU-036 ──
+  const agruparPorMes = (datos: typeof historialGraficos) => {
+    if (!datos) return [];
+    const meses: Record<string, { temps: number[]; precip: number[]; hums: number[]; label: string }> = {};
+    for (const d of datos) {
+      if (d.fuente === 'openweathermap_forecast') continue;
+      const fecha = d.fecha.split('T')[0];
+      const [year, month] = fecha.split('-');
+      const key = `${year}-${month}`;
+      const label = new Date(Number(year), Number(month) - 1, 1)
+        .toLocaleDateString('es-CO', { month: 'short', year: '2-digit' });
+      if (!meses[key]) meses[key] = { temps: [], precip: [], hums: [], label };
+      if (d.temp_promedio) meses[key].temps.push(Number(d.temp_promedio));
+      if (d.precipitacion_mm) meses[key].precip.push(Number(d.precipitacion_mm));
+      if (d.humedad_pct) meses[key].hums.push(Number(d.humedad_pct));
+    }
+    return Object.entries(meses)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, v]) => ({
+        mes: v.label,
+        temp_prom: v.temps.length
+          ? Math.round(v.temps.reduce((s, t) => s + t, 0) / v.temps.length * 10) / 10 : null,
+        precip_acum: v.precip.length
+          ? Math.round(v.precip.reduce((s, p) => s + p, 0) * 10) / 10 : 0,
+        humedad_prom: v.hums.length
+          ? Math.round(v.hums.reduce((s, h) => s + h, 0) / v.hums.length * 10) / 10 : null,
+      }));
+  };
+
+  const agruparPorMesAnio = (datos: typeof historialGraficos, anio: number) => {
+    if (!datos) return [];
+    const meses: Record<string, number[]> = {};
+    for (const d of datos) {
+      if (d.fuente === 'openweathermap_forecast') continue;
+      const fecha = d.fecha.split('T')[0];
+      const [year, month] = fecha.split('-');
+      if (Number(year) !== anio) continue;
+      if (!meses[month]) meses[month] = [];
+      if (d.temp_promedio) meses[month].push(Number(d.temp_promedio));
+    }
+    return Array.from({ length: 12 }, (_, i) => {
+      const m = String(i + 1).padStart(2, '0');
+      const label = new Date(anio, i, 1).toLocaleDateString('es-CO', { month: 'short' });
+      const temps = meses[m] || [];
+      return {
+        mes: label,
+        temp: temps.length
+          ? Math.round(temps.reduce((s, t) => s + t, 0) / temps.length * 10) / 10 : null,
+      };
+    });
+  };
+
+  const datosAgrupados = agruparPorMes(historialGraficos);
+  const anioActual = new Date().getFullYear();
+  const datosAnioActual = agruparPorMesAnio(historialGraficos, anioActual);
+  const datosAnioAnterior = agruparPorMesAnio(historialGraficos, anioActual - 1);
+  const datosComparacion = datosAnioActual.map((d, i) => ({
+    mes: d.mes,
+    [`${anioActual}`]: d.temp,
+    [`${anioActual - 1}`]: datosAnioAnterior[i]?.temp,
+  }));
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -141,6 +221,7 @@ export default function WeatherPage() {
             setShowForecast(false);
             setIdeamResult(null);
             setHistorialPage(1);
+            setShowGraficos(false);
           }}
           className={inputClass}
         >
@@ -308,11 +389,11 @@ export default function WeatherPage() {
             </div>
           )}
 
-          {/* Gráficos históricos + pronóstico */}
+          {/* Gráficos históricos recientes */}
           {datosGrafico.length >= 1 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold">Gráficos históricos</h2>
+                <h2 className="text-sm font-semibold">Gráficos recientes</h2>
                 {datosPronostico.length > 0 && (
                   <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                     <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-4 bg-emerald-600" /> Histórico real</span>
@@ -372,6 +453,100 @@ export default function WeatherPage() {
               </div>
             </div>
           )}
+
+          {/* ── HU-036: Gráficos históricos de tendencias ── */}
+          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            <button
+              onClick={() => setShowGraficos((v) => !v)}
+              className="flex w-full items-center justify-between px-5 py-3.5 hover:bg-muted/20"
+            >
+              <div className="flex items-center gap-2">
+                <BarChart2 className="h-4 w-4 text-emerald-600" />
+                <span className="text-sm font-semibold">Gráficos históricos de tendencias</span>
+              </div>
+              {showGraficos ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+
+            {showGraficos && (
+              <div className="border-t p-5 space-y-6">
+                {/* Selector de rango */}
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">Desde</label>
+                    <input type="date" value={graficoDesde} max={graficoHasta}
+                      onChange={(e) => setGraficoDesde(e.target.value)}
+                      className="h-9 rounded-lg border bg-background px-3 text-sm outline-none focus:border-emerald-300" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">Hasta</label>
+                    <input type="date" value={graficoHasta} min={graficoDesde}
+                      onChange={(e) => setGraficoHasta(e.target.value)}
+                      className="h-9 rounded-lg border bg-background px-3 text-sm outline-none focus:border-emerald-300" />
+                  </div>
+                </div>
+
+                {loadingGraficos ? (
+                  <div className="flex h-32 items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+                  </div>
+                ) : datosAgrupados.length > 0 ? (
+                  <>
+                    {/* Temperatura promedio mensual */}
+                    <div>
+                      <p className="mb-3 text-xs font-medium text-muted-foreground">Temperatura promedio mensual (°C)</p>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={datosAgrupados} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
+                          <YAxis tick={{ fontSize: 10 }} />
+                          <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: number) => [`${v}°C`]} />
+                          <Line type="monotone" dataKey="temp_prom" name="Temp. prom" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Precipitación acumulada mensual */}
+                    <div>
+                      <p className="mb-3 text-xs font-medium text-muted-foreground">Precipitación acumulada mensual (mm)</p>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={datosAgrupados} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
+                          <YAxis tick={{ fontSize: 10 }} />
+                          <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: number) => [`${v} mm`]} />
+                          <Bar dataKey="precip_acum" name="Precipitación" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* Comparación anual */}
+                    {datosComparacion.some((d) => d[`${anioActual}`] || d[`${anioActual - 1}`]) && (
+                      <div>
+                        <p className="mb-3 text-xs font-medium text-muted-foreground">
+                          Comparación anual — Temperatura promedio (°C)
+                        </p>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <LineChart data={datosComparacion} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
+                            <YAxis tick={{ fontSize: 10 }} />
+                            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v: number) => [`${v}°C`]} />
+                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                            <Line type="monotone" dataKey={`${anioActual}`} name={`${anioActual}`} stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                            <Line type="monotone" dataKey={`${anioActual - 1}`} name={`${anioActual - 1}`} stroke="#6366f1" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} connectNulls />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
+                    No hay datos históricos en el rango seleccionado
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Historial con paginación */}
           <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
