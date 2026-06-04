@@ -250,7 +250,8 @@ export default function ActivitiesPage() {
     };
 
     if (editingId) {
-      updateMutation.mutate({ id: editingId, data: payload });
+      const { parcela_id: _, ...updatePayload } = payload;
+      updateMutation.mutate({ id: editingId, data: updatePayload });
     } else {
       createMutation.mutate(payload);
     }
