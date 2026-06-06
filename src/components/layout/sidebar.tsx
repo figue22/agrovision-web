@@ -50,7 +50,7 @@ const navItems: NavItem[] = [
 
 const adminItems: NavItem[] = [
   { label: 'Usuarios', href: '/admin/users', icon: Users, roles: ['admin'] },
-  { label: 'Documentos RAG', href: '/admin/documents', icon: FileText, roles: ['admin'] },
+  { label: 'Documentos RAG', href: '/admin/documents', icon: FileText, roles: ['admin', 'tecnico'] },
   { label: 'Catálogos', href: '/admin/catalogs', icon: BookOpen, roles: ['admin'] },
   { label: 'Auditoría', href: '/admin/audit', icon: Shield, roles: ['admin'] },
   { label: 'Monitoreo', href: '/admin/monitoring', icon: Activity, roles: ['admin', 'tecnico'] },
