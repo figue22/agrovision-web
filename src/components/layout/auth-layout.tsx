@@ -16,6 +16,7 @@ const routePermissions: Record<string, string[]> = {
   '/admin/audit': ['admin'],
   '/admin/analytics': ['admin'],
   '/admin/monitoring': ['admin', 'tecnico'],
+  '/admin/rag-metrics': ['admin', 'tecnico'],
 };
 
 export function AuthLayout({ children }: { children: React.ReactNode }) {
