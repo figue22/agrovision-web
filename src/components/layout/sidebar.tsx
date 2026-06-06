@@ -46,6 +46,7 @@ const navItems: NavItem[] = [
   { label: 'Clima', href: '/weather', icon: Cloud, roles: ['agricultor', 'tecnico', 'admin'] },
   { label: 'Alertas', href: '/alerts', icon: Bell, roles: ['agricultor', 'tecnico', 'admin'] },
   { label: 'Chat IA', href: '/chat', icon: MessageCircle, roles: ['agricultor', 'tecnico', 'admin'] },
+  { label: 'Consulta Documentos', href: '/rag', icon: BookOpen, roles: ['agricultor', 'tecnico', 'admin'] },
 ];
 
 const adminItems: NavItem[] = [
@@ -55,6 +56,7 @@ const adminItems: NavItem[] = [
   { label: 'Auditoría', href: '/admin/audit', icon: Shield, roles: ['admin'] },
   { label: 'Monitoreo', href: '/admin/monitoring', icon: Activity, roles: ['admin', 'tecnico'] },
   { label: 'Analíticas', href: '/admin/analytics', icon: PieChart, roles: ['admin'] },
+  { label: 'Métricas RAG', href: '/admin/rag-metrics', icon: BarChart3, roles: ['admin', 'tecnico'] },
 ];
 
 const bottomItems: NavItem[] = [
