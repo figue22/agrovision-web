@@ -11,7 +11,7 @@ const publicRoutes = ['/auth/login', '/auth/register'];
 // Rutas protegidas por rol
 const routePermissions: Record<string, string[]> = {
   '/admin/users': ['admin'],
-  '/admin/documents': ['admin'],
+  '/admin/documents': ['admin', 'tecnico'],
   '/admin/catalogs': ['admin'],
   '/admin/audit': ['admin'],
   '/admin/analytics': ['admin'],
