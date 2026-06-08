@@ -57,6 +57,7 @@ const adminItems: NavItem[] = [
   { label: 'Monitoreo', href: '/admin/monitoring', icon: Activity, roles: ['admin', 'tecnico'] },
   { label: 'Analíticas', href: '/admin/analytics', icon: PieChart, roles: ['admin'] },
   { label: 'Métricas RAG', href: '/admin/rag-metrics', icon: BarChart3, roles: ['admin', 'tecnico'] },
+  { label: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle, roles: ['admin', 'tecnico'] },
 ];
 
 const bottomItems: NavItem[] = [
