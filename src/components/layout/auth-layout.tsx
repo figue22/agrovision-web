@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 
-const publicRoutes = ['/auth/login', '/auth/register'];
+const publicRoutes = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password'];
 
 // Rutas protegidas por rol
 const routePermissions: Record<string, string[]> = {

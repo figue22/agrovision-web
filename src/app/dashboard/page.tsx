@@ -11,6 +11,7 @@ import { parcelasService } from '@/services/parcelas.service';
 import { cultivosService } from '@/services/cultivos.service';
 import { alertsService } from '@/services/alerts.service';
 import { weatherService } from '@/services/weather.service';
+import { predictionsService } from '@/services/predictions.service';
 
 function diasHastaCosecha(fechaCosechaEsperada?: string): number | null {
   if (!fechaCosechaEsperada) return null;
@@ -48,6 +49,12 @@ export default function DashboardPage() {
   const { data: unreadCount } = useQuery({
     queryKey: ['alertas-unread-count'],
     queryFn: alertsService.countUnread,
+    enabled: !!usuario,
+  });
+
+  const { data: predicciones } = useQuery({
+    queryKey: ['predicciones-dashboard'],
+    queryFn: () => predictionsService.getAll(100),
     enabled: !!usuario,
   });
 
@@ -118,8 +125,12 @@ export default function DashboardPage() {
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Predicciones</span>
             <div className="rounded-lg bg-blue-50 p-2 text-blue-600"><BarChart3 className="h-4 w-4" /></div>
           </div>
-          <p className="mt-2 text-3xl font-semibold text-muted-foreground/40">—</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Próximamente</p>
+          <p className="mt-2 text-3xl font-semibold">{predicciones?.length || 0}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {predicciones && predicciones.length > 0 
+              ? <><span className="font-medium text-blue-600">{Number(predicciones[0]?.rendimiento_predicho_ton || 0).toFixed(2)} ton</span> rendimiento predicho</> 
+              : 'Registra datos para generar'}
+          </p>
         </div>
 
         <div className="rounded-xl border bg-card p-5">
