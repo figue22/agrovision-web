@@ -13,15 +13,18 @@ export interface PrediccionResponse {
   intervalo_conf_superior?: number;
   nivel_riesgo: string;
   factores_riesgo?: Record<string, unknown>;
+  datos_clima_usados?: Record<string, unknown>;
   importancia_features?: Record<string, unknown>;
   fecha_prediccion: string;
+  fecha_cosecha_estimada?: string;
+  dias_para_cosecha?: number;
   tipoCultivo?: { nombre: string };
   parcela?: { nombre: string };
   recomendaciones?: {
     recomendacion_id: string;
     titulo: string;
     prioridad: string;
-    estado_implementacion: string;
+    estado: string;
   }[];
 }
 
