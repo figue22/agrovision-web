@@ -46,7 +46,6 @@ const navItems: NavItem[] = [
   { label: 'Clima', href: '/weather', icon: Cloud, roles: ['agricultor', 'tecnico', 'admin'] },
   { label: 'Alertas', href: '/alerts', icon: Bell, roles: ['agricultor', 'tecnico', 'admin'] },
   { label: 'Chat IA', href: '/chat', icon: MessageCircle, roles: ['agricultor', 'tecnico', 'admin'] },
-  { label: 'Consulta Documentos', href: '/rag', icon: BookOpen, roles: ['agricultor', 'tecnico', 'admin'] },
 ];
 
 const adminItems: NavItem[] = [

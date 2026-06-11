@@ -174,7 +174,7 @@ export default function DocumentsAdminPage() {
                 <label className="mb-1.5 block text-sm font-medium">Categoría</label>
                 <select value={uploadForm.categoria} onChange={(e) => setUploadForm({ ...uploadForm, categoria: e.target.value })} className={inputClass}>
                   <option value="general">General</option>
-                  <option value="cafe">Café</option>
+                  <option value="platano">Plátano</option>
                   <option value="cacao">Cacao</option>
                   <option value="plagas">Plagas y enfermedades</option>
                   <option value="suelos">Suelos y fertilización</option>
@@ -184,7 +184,7 @@ export default function DocumentsAdminPage() {
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium">Institución</label>
-                <input value={uploadForm.institucion} onChange={(e) => setUploadForm({ ...uploadForm, institucion: e.target.value })} className={inputClass} placeholder="ICA, AGROSAVIA, CENICAFÉ..." />
+                <input value={uploadForm.institucion} onChange={(e) => setUploadForm({ ...uploadForm, institucion: e.target.value })} className={inputClass} placeholder="ICA, AGROSAVIA..." />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium">Idioma</label>
@@ -221,7 +221,7 @@ export default function DocumentsAdminPage() {
               <label className="mb-1.5 block text-sm font-medium">Categoría</label>
               <select value={editForm.categoria} onChange={(e) => setEditForm({ ...editForm, categoria: e.target.value })} className={inputClass}>
                 <option value="general">General</option>
-                <option value="cafe">Café</option>
+                <option value="platano">Plátano</option>
                 <option value="cacao">Cacao</option>
                 <option value="plagas">Plagas y enfermedades</option>
                 <option value="suelos">Suelos y fertilización</option>

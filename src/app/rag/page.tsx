@@ -174,7 +174,7 @@ export default function RagPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Consulta de Documentos Técnicos</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Consultas basadas en documentos agrícolas indexados (ICA, AGROSAVIA, CENICAFÉ)
+            Consultas basadas en documentos agrícolas indexados (ICA, AGROSAVIA)
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -205,8 +205,8 @@ export default function RagPage() {
             <p className="text-sm">Consulta los documentos técnicos agrícolas</p>
             <div className="flex flex-wrap justify-center gap-2">
               {[
-                '¿Cómo fertilizar el café?',
-                '¿Cómo controlar la roya?',
+                '¿Cómo fertilizar el platano?',
+                '¿Cómo controlar las plagas?',
                 '¿Cuándo cosechar el cacao?',
               ].map((q) => (
                 <button key={q} onClick={() => setInput(q)}
