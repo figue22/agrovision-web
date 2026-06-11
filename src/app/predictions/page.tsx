@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart3, TrendingUp, Loader2, Target, Plus, X,
-  ChevronDown, ChevronUp, Zap, Info,
+  ChevronDown, ChevronUp, Zap, Info, Calendar,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -27,7 +27,7 @@ const inputClass = 'h-10 w-full rounded-lg border bg-background px-3 text-sm out
 
 const MODELOS = [
   { value: 'ensemble', label: 'Ensemble (XGBoost + LSTM)', desc: 'Más preciso — RMSE 2.24%' },
-  { value: 'xgboost', label: 'XGBoost', desc: 'Rápido — R² 0.9956' },
+  { value: 'xgboost', label: 'XGBoost', desc: 'Rápido — R² 0.9988' },
   { value: 'lstm', label: 'LSTM', desc: 'Series temporales — R² 0.9901' },
 ];
 
@@ -40,8 +40,6 @@ export default function PredictionsPage() {
   const [formData, setFormData] = useState({
     cultivo_parcela_id: '',
     modelo: 'ensemble',
-    ph_suelo: '6.0',
-    altitud_msnm: '1500',
     materia_organica_pct: '3.0',
     nivel_fertilizacion: '1',
     tiene_riego: '0',
@@ -85,14 +83,19 @@ export default function PredictionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['predicciones', selectedParcela] });
       queryClient.invalidateQueries({ queryKey: ['prediccion-ultima', selectedParcela] });
+      queryClient.invalidateQueries({ queryKey: ['cultivos-parcela', selectedParcela] });
       setShowForm(false);
     },
   });
 
   const handleSubmit = () => {
     const cultivoSelected = cultivos?.find((c) => c.cultivo_parcela_id === formData.cultivo_parcela_id);
-    const cultivoNombre = cultivoSelected?.tipoCultivo?.nombre?.toLowerCase() || 'cafe';
-    const cultivo = cultivoNombre.includes('cacao') ? 'cacao' : 'cafe';
+
+    // Normalizar nombre del cultivo
+    const cultivoNombre = cultivoSelected?.tipoCultivo?.nombre?.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '_') || 'platano';
+    const cultivo = cultivoNombre.includes('cacao') ? 'cacao' : 'platano';
 
     const payload = {
       parcela_id: selectedParcela,
@@ -101,9 +104,7 @@ export default function PredictionsPage() {
       modelo: formData.modelo,
       datos_agronomicos: {
         cultivo,
-        departamento: 'Caldas',
-        ph_suelo: parseFloat(formData.ph_suelo),
-        altitud_msnm: parseFloat(formData.altitud_msnm),
+        // Datos agronómicos del formulario — el backend enriquece con datos reales de BD
         materia_organica_pct: parseFloat(formData.materia_organica_pct),
         nivel_fertilizacion: parseInt(formData.nivel_fertilizacion),
         tiene_riego: parseInt(formData.tiene_riego),
@@ -111,25 +112,12 @@ export default function PredictionsPage() {
         variedad: formData.variedad,
         tipo_labranza: formData.tipo_labranza,
         densidad_siembra_rel: parseFloat(formData.densidad_siembra_rel),
-        area_sembrada_ha: cultivoSelected?.area_sembrada_ha || 2.0,
-        dias_desde_siembra: cultivoSelected?.fecha_siembra
-          ? Math.floor((Date.now() - new Date(cultivoSelected.fecha_siembra).getTime()) / (1000 * 60 * 60 * 24))
-          : 90,
-        // Clima actual si está disponible
-        temp_promedio_c: climaActual?.temp_promedio ? parseFloat(String(climaActual.temp_promedio)) : 20,
-        temp_maxima_c: climaActual?.temp_maxima ? parseFloat(String(climaActual.temp_maxima)) : 25,
-        temp_minima_c: climaActual?.temp_minima ? parseFloat(String(climaActual.temp_minima)) : 15,
-        precipitacion_mm_90d: climaActual?.precipitacion_mm ? parseFloat(String(climaActual.precipitacion_mm)) : 500,
-        humedad_promedio_pct: climaActual?.humedad_pct ? parseFloat(String(climaActual.humedad_pct)) : 75,
-        dias_sin_lluvia: 5,
-        velocidad_viento_ms: climaActual?.velocidad_viento ? parseFloat(String(climaActual.velocidad_viento)) : 2.0,
-        radiacion_solar_kwh: 4.5,
       },
     };
     createMutation.mutate(payload);
   };
 
-  // Datos para gráfica de intervalo de confianza
+  // Datos para gráfica
   const chartData = predicciones?.slice(0, 8).reverse().map((p, i) => ({
     name: `P${i + 1}`,
     rendimiento: p.rendimiento_predicho_ton,
@@ -175,7 +163,8 @@ export default function PredictionsPage() {
           {climaActual && (
             <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
               <Info className="h-3.5 w-3.5 flex-shrink-0" />
-              Usando datos climáticos actuales de la parcela: {climaActual.temp_promedio}°C · {climaActual.humedad_pct}% hum · {climaActual.precipitacion_mm ?? 0} mm
+              El backend usará automáticamente datos reales de la parcela: clima últimos 90 días,
+              pH {climaActual ? '✅' : '--'}, altitud, tipo de suelo y días desde siembra.
             </div>
           )}
 
@@ -199,16 +188,6 @@ export default function PredictionsPage() {
               <p className="mt-1 text-xs text-muted-foreground">{MODELOS.find((m) => m.value === formData.modelo)?.desc}</p>
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-sm font-medium">pH del suelo</label>
-              <input type="number" step="0.1" min="4" max="8" value={formData.ph_suelo}
-                onChange={(e) => setFormData({ ...formData, ph_suelo: e.target.value })} className={inputClass} />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium">Altitud (msnm)</label>
-              <input type="number" value={formData.altitud_msnm}
-                onChange={(e) => setFormData({ ...formData, altitud_msnm: e.target.value })} className={inputClass} />
-            </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium">Materia orgánica (%)</label>
               <input type="number" step="0.1" value={formData.materia_organica_pct}
@@ -282,16 +261,15 @@ export default function PredictionsPage() {
                 <div>
                   <p className="text-xs text-muted-foreground">Rendimiento</p>
                   <p className="text-3xl font-bold text-emerald-600">{ultima.rendimiento_predicho_ton} <span className="text-sm font-normal">ton/ha</span></p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {ultima.intervalo_conf_inferior ?? '--'} — {ultima.intervalo_conf_superior ?? '--'} ton/ha
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Confianza</p>
                   <p className="text-3xl font-bold text-blue-600">{ultima.puntaje_confianza ?? '--'}<span className="text-sm font-normal">%</span></p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Intervalo de confianza</p>
-                  <p className="text-lg font-semibold">{ultima.intervalo_conf_inferior ?? '--'} — {ultima.intervalo_conf_superior ?? '--'} <span className="text-xs font-normal">ton/ha</span></p>
-                  <div className="mt-1 h-2 w-full rounded-full bg-muted">
-                    <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${ultima.puntaje_confianza ?? 0}%` }} />
+                  <div className="mt-2 h-2 w-full rounded-full bg-muted">
+                    <div className="h-2 rounded-full bg-blue-500" style={{ width: `${ultima.puntaje_confianza ?? 0}%` }} />
                   </div>
                 </div>
                 <div>
@@ -301,6 +279,21 @@ export default function PredictionsPage() {
                     return <span className={`mt-1 inline-block rounded-full px-3 py-1 text-sm font-medium ${r.bg} ${r.text}`}>{r.label}</span>;
                   })()}
                 </div>
+                {(ultima as any).fecha_cosecha_estimada && (
+                  <div>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="h-3 w-3" /> Cosecha estimada</p>
+                    <p className="text-lg font-bold text-amber-600">
+                      {new Date((ultima as any).fecha_cosecha_estimada).toLocaleDateString('es-CO', {
+                        day: 'numeric', month: 'long', year: 'numeric',
+                      })}
+                    </p>
+                    {(ultima as any).dias_para_cosecha != null && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        En {(ultima as any).dias_para_cosecha} días
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground">
                 <span>Modelo: <span className="font-medium">{ultima.tipo_modelo}</span> v{ultima.version_modelo}</span>
@@ -310,10 +303,10 @@ export default function PredictionsPage() {
             </div>
           )}
 
-          {/* Gráfica de intervalos de confianza */}
+          {/* Gráfica */}
           {chartData.length > 1 && (
             <div className="rounded-xl border bg-card p-5 shadow-sm">
-              <h2 className="mb-4 text-sm font-semibold">Historial de predicciones con intervalos de confianza</h2>
+              <h2 className="mb-4 text-sm font-semibold">Historial de predicciones</h2>
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -376,13 +369,40 @@ export default function PredictionsPage() {
                                 <Target className="mr-0.5 inline h-3 w-3" />{p.intervalo_conf_inferior}–{p.intervalo_conf_superior} ton/ha
                               </span>
                             )}
+                            {(p as any).fecha_cosecha_estimada && (
+                              <span className="text-[11px] text-amber-600">
+                                <Calendar className="mr-0.5 inline h-3 w-3" />
+                                Cosecha: {new Date((p as any).fecha_cosecha_estimada).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
                       {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                     </div>
                     {isExpanded && (
-                      <div className="border-t bg-muted/10 px-5 py-4 space-y-2">
+                      <div className="border-t bg-muted/10 px-5 py-4 space-y-3">
+                        {/* Fecha cosecha */}
+                        {(p as any).fecha_cosecha_estimada && (
+                          <div className="flex items-center gap-3 rounded-lg bg-amber-50 px-4 py-2.5 border border-amber-200">
+                            <Calendar className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                            <div>
+                              <p className="text-xs font-medium text-amber-800">Cosecha estimada</p>
+                              <p className="text-sm font-bold text-amber-700">
+                                {new Date((p as any).fecha_cosecha_estimada).toLocaleDateString('es-CO', {
+                                  day: 'numeric', month: 'long', year: 'numeric',
+                                })}
+                                {(p as any).dias_para_cosecha != null && (
+                                  <span className="ml-2 text-xs font-normal text-amber-600">
+                                    ({(p as any).dias_para_cosecha} días restantes)
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Factores de riesgo */}
                         {p.factores_riesgo && Object.keys(p.factores_riesgo).length > 0 && (
                           <div>
                             <p className="text-xs font-medium text-muted-foreground mb-1">Factores de riesgo</p>
@@ -393,6 +413,22 @@ export default function PredictionsPage() {
                             </div>
                           </div>
                         )}
+
+                        {/* Datos clima usados */}
+                        {(p as any).datos_clima_usados && Object.keys((p as any).datos_clima_usados).length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Datos climáticos usados</p>
+                            <div className="grid grid-cols-3 gap-2">
+                              {Object.entries((p as any).datos_clima_usados)
+                                .filter(([, v]) => v != null)
+                                .map(([k, v]) => (
+                                  <p key={k} className="text-xs"><span className="font-medium">{k}:</span> {String(v)}</p>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Feature importance */}
                         {p.importancia_features && Object.keys(p.importancia_features).length > 0 && (
                           <div>
                             <p className="text-xs font-medium text-muted-foreground mb-1">Features más importantes</p>
@@ -409,22 +445,24 @@ export default function PredictionsPage() {
                             </div>
                           </div>
                         )}
-                        {p.recomendaciones && p.recomendaciones.length > 0 && (
+
+                        {/* Recomendaciones */}
+                        {(p as any).recomendaciones && (p as any).recomendaciones.length > 0 && (
                           <div>
                             <p className="text-xs font-medium text-muted-foreground mb-2">
-                              Recomendaciones ({p.recomendaciones.length})
+                              Recomendaciones ({(p as any).recomendaciones.length})
                             </p>
                             <div className="space-y-2">
-                              {p.recomendaciones.map((r) => (
-                                <div key={r.recomendacion_id} className="rounded-lg border bg-background px-3 py-2">
+                              {(p as any).recomendaciones.map((rec: any) => (
+                                <div key={rec.recomendacion_id} className="rounded-lg border bg-background px-3 py-2">
                                   <div className="flex items-center gap-2">
                                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                                      r.prioridad === 'critica' ? 'bg-red-50 text-red-700' :
-                                      r.prioridad === 'alta' ? 'bg-orange-50 text-orange-700' :
-                                      r.prioridad === 'media' ? 'bg-yellow-50 text-yellow-700' :
+                                      rec.prioridad === 'critica' ? 'bg-red-50 text-red-700' :
+                                      rec.prioridad === 'alta' ? 'bg-orange-50 text-orange-700' :
+                                      rec.prioridad === 'media' ? 'bg-yellow-50 text-yellow-700' :
                                       'bg-green-50 text-green-700'
-                                    }`}>{r.prioridad}</span>
-                                    <p className="text-xs font-medium">{r.titulo}</p>
+                                    }`}>{rec.prioridad}</span>
+                                    <p className="text-xs font-medium">{rec.titulo}</p>
                                   </div>
                                 </div>
                               ))}
